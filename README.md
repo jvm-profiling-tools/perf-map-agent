@@ -1,10 +1,10 @@
 A java agent to generate /tmp/perf-<pid>.map files for JITted methods for use with `perf`
 
-# Build
+## Build
 
     cmake .
     make
 
-# Use
+## Use
 
 Add `-agentpath:<dir>/libperfmap.so` to the java command line.
