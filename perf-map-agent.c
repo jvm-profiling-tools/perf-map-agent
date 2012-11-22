@@ -7,7 +7,7 @@ static void JNICALL
 cbVMStart(jvmtiEnv *jvmti, JNIEnv *env) {
     jvmtiJlocationFormat format;
     (*jvmti)->GetJLocationFormat(jvmti, &format);
-    printf("[tracker] VMStart LocationFormat: %d\n", format);
+    //printf("[tracker] VMStart LocationFormat: %d\n", format);
     char methodFileName[500];
     sprintf(methodFileName, "/tmp/perf-%d.map", getpid());
     method_file = fopen(methodFileName, "w");
