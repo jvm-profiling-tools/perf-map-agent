@@ -1,16 +1,27 @@
 #include <jni.h>
 #include <jvmti.h>
 
-FILE *method_file;
+FILE *method_file = NULL;
+
+void JNICALL
+cbVMInit(jvmtiEnv *jvmti_env,
+            JNIEnv* jni_env,
+            jthread thread) {
+    if (!method_file)
+        open_file();
+}
+
+void open_file() {
+    char methodFileName[500];
+    sprintf(methodFileName, "/tmp/perf-%d.map", getpid());
+    method_file = fopen(methodFileName, "w");
+}
 
 static void JNICALL
 cbVMStart(jvmtiEnv *jvmti, JNIEnv *env) {
     jvmtiJlocationFormat format;
     (*jvmti)->GetJLocationFormat(jvmti, &format);
     //printf("[tracker] VMStart LocationFormat: %d\n", format);
-    char methodFileName[500];
-    sprintf(methodFileName, "/tmp/perf-%d.map", getpid());
-    method_file = fopen(methodFileName, "w");
 }
 
 static void JNICALL
@@ -32,7 +43,7 @@ cbCompiledMethodLoad(jvmtiEnv *env,
     char *csig;
     (*env)->GetClassSignature(env, class, &csig, NULL);
 
-    fprintf(method_file, "%lx %lx %s.%s%s\n", code_addr, code_size, csig, name, msig);
+    fprintf(method_file, "%lx %x %s.%s%s\n", code_addr, code_size, csig, name, msig);
     fsync(fileno(method_file));
     (*env)->Deallocate(env, name);
     (*env)->Deallocate(env, msig);
@@ -41,6 +52,18 @@ cbCompiledMethodLoad(jvmtiEnv *env,
     /*for (i = 0; i < map_length; i++) {
       printf("[tracker] Entry: start_address: 0x%lx location: %d\n", map[i].start_address, map[i].location);
     }*/
+}
+
+void JNICALL
+cbDynamicCodeGenerated(jvmtiEnv *jvmti_env,
+            const char* name,
+            const void* address,
+            jint length) {
+    if (!method_file)
+        open_file();
+
+    fprintf(method_file, "%lx %x %s\n", address, length, name);
+    //printf("[tracker] Code generated: %s %lx %x\n", name, address, length);
 }
 
 void JNICALL
@@ -82,20 +105,26 @@ Agent_OnLoad(JavaVM *vm, char *options, void *reserved) {
 
     // Clear the callbacks structure and set the ones you want.
     (void)memset(&callbacks,0, sizeof(callbacks));
+    callbacks.VMInit           = &cbVMInit;
     callbacks.VMStart           = &cbVMStart;
     callbacks.CompiledMethodLoad  = &cbCompiledMethodLoad;
     callbacks.CompiledMethodUnload  = &cbCompiledMethodUnload;
+    callbacks.DynamicCodeGenerated = &cbDynamicCodeGenerated;
     error = (*jvmti)->SetEventCallbacks(jvmti, &callbacks,
                       (jint)sizeof(callbacks));
     //  If error!=JVMTI_ERROR_NONE, the callbacks were not accepted.
 
     // For each of the above callbacks, enable this event.
     error = (*jvmti)->SetEventNotificationMode(jvmti, JVMTI_ENABLE,
+                      JVMTI_EVENT_VM_INIT, (jthread)NULL);
+    error = (*jvmti)->SetEventNotificationMode(jvmti, JVMTI_ENABLE,
                       JVMTI_EVENT_VM_START, (jthread)NULL);
     error = (*jvmti)->SetEventNotificationMode(jvmti, JVMTI_ENABLE,
                       JVMTI_EVENT_COMPILED_METHOD_LOAD, (jthread)NULL);
     error = (*jvmti)->SetEventNotificationMode(jvmti, JVMTI_ENABLE,
                       JVMTI_EVENT_COMPILED_METHOD_UNLOAD, (jthread)NULL);
+    error = (*jvmti)->SetEventNotificationMode(jvmti, JVMTI_ENABLE,
+                      JVMTI_EVENT_DYNAMIC_CODE_GENERATED, (jthread)NULL);
     // In all the above calls, check errors.
 
     return JNI_OK; // Indicates to the VM that the agent loaded OK.
