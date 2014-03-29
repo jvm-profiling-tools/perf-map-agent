@@ -1,5 +1,6 @@
 #include <jni.h>
 #include <jvmti.h>
+#include "jvmticmlr.h"
 
 FILE *method_file = NULL;
 
@@ -24,6 +25,31 @@ cbVMStart(jvmtiEnv *jvmti, JNIEnv *env) {
     //printf("[tracker] VMStart LocationFormat: %d\n", format);
 }
 
+static int get_line_number(jvmtiLineNumberEntry *table, jint entry_count, jlocation loc) {
+  int i;
+  for (i = 0; i < entry_count; i++)
+    if (table[i].start_location > loc) return table[i - 1].line_number;
+
+  return -1;
+}
+
+static void sig_string(jvmtiEnv *env, jmethodID method, char *output, int noutput) {
+    char *name;
+    char *msig;
+    jclass class;
+    char *csig;
+
+    (*env)->GetMethodName(env, method, &name, &msig, NULL);
+    (*env)->GetMethodDeclaringClass(env, method, &class);
+    (*env)->GetClassSignature(env, class, &csig, NULL);
+
+    snprintf(output, noutput, "%s.%s%s", csig, name, msig);
+
+    (*env)->Deallocate(env, name);
+    (*env)->Deallocate(env, msig);
+    (*env)->Deallocate(env, csig);
+}
+
 static void JNICALL
 cbCompiledMethodLoad(jvmtiEnv *env,
             jmethodID method,
@@ -34,24 +60,43 @@ cbCompiledMethodLoad(jvmtiEnv *env,
             const void* compile_info) {
     int i;
 
-    char *name;
-    char *msig;
-    (*env)->GetMethodName(env, method, &name, &msig, NULL);
+    char name_buffer[1000];
+    sig_string(env, method, name_buffer, 1000);
 
-    jclass class;
-    (*env)->GetMethodDeclaringClass(env, method, &class);
-    char *csig;
-    (*env)->GetClassSignature(env, class, &csig, NULL);
+    jvmtiCompiledMethodLoadRecordHeader *header = compile_info;
+    //printf("[tracker] Loaded %s addr: %lx to %lx length: %d with %d location entries, header has kind: %d\n", name_buffer, code_addr, code_addr + code_size, code_size, map_length, header->kind);
+    if (header->kind == JVMTI_CMLR_INLINE_INFO) {
+        jvmtiCompiledMethodLoadInlineRecord *record = header;
+        //printf("[inline] Got %d PC records\n", record->numpcs);
 
-    fprintf(method_file, "%lx %x %s.%s%s\n", code_addr, code_size, csig, name, msig);
+        void *start_addr = code_addr;
+        jmethodID cur_method = method;
+        char name2_buffer[1000];
+        for (i = 0; i < record->numpcs; i++) {
+            PCStackInfo *info = &record->pcinfo[i];
+            jmethodID top_method = info->methods[0];
+            if (cur_method != top_method) {
+                void *end_addr = info->pc;
+                
+                if (top_method != method) {
+                    sig_string(env, top_method, name2_buffer, 1000);
+                    fprintf(method_file, "%lx %x %s in %s\n", start_addr, end_addr - start_addr, name2_buffer, name_buffer);
+                } else
+                    fprintf(method_file, "%lx %x %s\n", start_addr, end_addr - start_addr, name_buffer);
+
+                start_addr = info->pc;
+                cur_method = top_method;
+            }
+        }
+        if (start_addr != code_addr + code_size) {
+            void *end_addr = code_addr + code_size;
+            sig_string(env, cur_method, name2_buffer, 1000);
+            fprintf(method_file, "%lx %x %s in %s\n", start_addr, end_addr - start_addr, name2_buffer, name_buffer);
+        }
+    } else
+      fprintf(method_file, "%lx %x %s\n", code_addr, code_size, name_buffer);
+    
     fsync(fileno(method_file));
-    (*env)->Deallocate(env, name);
-    (*env)->Deallocate(env, msig);
-    (*env)->Deallocate(env, csig);
-
-    /*for (i = 0; i < map_length; i++) {
-      printf("[tracker] Entry: start_address: 0x%lx location: %d\n", map[i].start_address, map[i].location);
-    }*/
 }
 
 void JNICALL
