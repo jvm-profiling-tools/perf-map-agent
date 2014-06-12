@@ -17,3 +17,7 @@ the file accessible for the root user. Then run `perf top` as root. You could us
 sudo chown root /tmp/perf-$1.map
 sudo perf top
 ```
+
+## Disclaimer
+
+I'm not a professional C code writer. The code is very "experimental", and it is e.g. missing checks for error conditions etc.. Use it at your own risk. You have been warned!
