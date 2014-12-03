@@ -18,6 +18,12 @@ sudo chown root /tmp/perf-$1.map
 sudo perf top
 ```
 
+## Options
+
+You can add a comma separated list of options to `perf-java` (or the `AttachOnce` runner). These options are currently supported:
+
+ - `unfold`: create extra entries for every codeblock inside a method that was inlined from elsewhere (named &lt;inlined_method&gt; in &lt;root_method&gt;)
+
 ## Disclaimer
 
 I'm not a professional C code writer. The code is very "experimental", and it is e.g. missing checks for error conditions etc.. Use it at your own risk. You have been warned!
