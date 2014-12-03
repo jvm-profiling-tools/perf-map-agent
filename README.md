@@ -21,3 +21,7 @@ sudo perf top
 ## Disclaimer
 
 I'm not a professional C code writer. The code is very "experimental", and it is e.g. missing checks for error conditions etc.. Use it at your own risk. You have been warned!
+
+## License
+
+This library is licensed under GPLv2. See the LICENSE file.
