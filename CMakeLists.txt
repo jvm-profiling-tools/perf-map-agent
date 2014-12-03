@@ -11,6 +11,6 @@ endif()
 INCLUDE_DIRECTORIES(${JAVA_INCLUDE_PATH})
 INCLUDE_DIRECTORIES(${JAVA_INCLUDE_PATH2})
 
-add_library(perfmap SHARED perf-map-agent.c)
+add_library(perfmap SHARED perf-map-agent.c perf-map-file.c)
 
 
