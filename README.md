@@ -1,4 +1,4 @@
-A java agent to generate /tmp/perf-<pid>.map files for JITted methods for use with `perf`
+A java agent to generate `/tmp/perf-<pid>.map` files for JITted methods for use with `perf`.
 
 ## Build
 
@@ -7,16 +7,15 @@ A java agent to generate /tmp/perf-<pid>.map files for JITted methods for use wi
 
 ## Use
 
-Add `-agentpath:<dir>/libperfmap.so` to the java command line.
+Use `./perf-java <pid> <options>` to create a `perf-<pid>.map` file for the current state of the JVM and
+run `perf top -p <pid>` for this process afterwards. `perf-java` expects `libperfmap.so` in the current directory.
+
+Over time the JVM will JIT compile more methods and the `perf-<pid>.map` file will become stale. You need to
+rerun `perf-java` to generate a new and current map.
 
 Note: If `perf top` still doesn't show any detailled info it's probably because of a permission problem. A common solution is
 to run the java program as a regular user with the agent enabled and then run a `chown root /tmp/perf-<pid>.map` to make
-the file accessible for the root user. Then run `perf top` as root. You could use the following script to do that:
-
-```sh
-sudo chown root /tmp/perf-$1.map
-sudo perf top
-```
+the file accessible for the root user. Then run `perf top` as root. The `perf-java` script tries to do that.
 
 ## Disclaimer
 
