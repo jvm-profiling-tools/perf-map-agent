@@ -1,7 +1,14 @@
 #include <jni.h>
 #include <jvmti.h>
+#include <string.h>
 
 FILE *method_file = NULL;
+
+void open_file() {
+    char methodFileName[500];
+    sprintf(methodFileName, "/tmp/perf-%d.map", getpid());
+    method_file = fopen(methodFileName, "w");
+}
 
 void JNICALL
 cbVMInit(jvmtiEnv *jvmti_env,
@@ -9,12 +16,6 @@ cbVMInit(jvmtiEnv *jvmti_env,
             jthread thread) {
     if (!method_file)
         open_file();
-}
-
-void open_file() {
-    char methodFileName[500];
-    sprintf(methodFileName, "/tmp/perf-%d.map", getpid());
-    method_file = fopen(methodFileName, "w");
 }
 
 static void JNICALL
@@ -43,7 +44,7 @@ cbCompiledMethodLoad(jvmtiEnv *env,
     char *csig;
     (*env)->GetClassSignature(env, class, &csig, NULL);
 
-    fprintf(method_file, "%lx %x %s.%s%s\n", code_addr, code_size, csig, name, msig);
+    fprintf(method_file, "%p %x %s.%s%s\n", code_addr, code_size, csig, name, msig);
     fsync(fileno(method_file));
     (*env)->Deallocate(env, name);
     (*env)->Deallocate(env, msig);
@@ -62,7 +63,7 @@ cbDynamicCodeGenerated(jvmtiEnv *jvmti_env,
     if (!method_file)
         open_file();
 
-    fprintf(method_file, "%lx %x %s\n", address, length, name);
+    fprintf(method_file, "%p %x %s\n", address, length, name);
     //printf("[tracker] Code generated: %s %lx %x\n", name, address, length);
 }
 
