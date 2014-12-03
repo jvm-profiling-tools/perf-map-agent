@@ -9,7 +9,7 @@ public class AttachOnce {
     public static void main(String[] args) throws Exception {
         String pid = args[0];
         String options = "";
-        if (args.length > 2) options = args[1];
+        if (args.length > 1) options = args[1];
         loadAgent(pid, options);
     }
 

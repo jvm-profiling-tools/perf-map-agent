@@ -180,8 +180,6 @@ Agent_OnAttach(JavaVM *vm, char *options, void *reserved) {
     ftruncate(fileno(method_file));
 
     unfold_inlined_methods = strstr(options, "unfold") != NULL;
-    printf("Options: %s\n", options);
-    if (unfold_inlined_methods) printf("Unfold enabled!\n");
 
     jvmtiEnv *jvmti;
     (*vm)->GetEnv(vm, (void **)&jvmti, JVMTI_VERSION_1);
