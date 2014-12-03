@@ -191,6 +191,7 @@ Agent_OnAttach(JavaVM *vm, char *options, void *reserved) {
     (*jvmti)->GenerateEvents(jvmti, JVMTI_EVENT_COMPILED_METHOD_LOAD);
     set_notification_mode(jvmti, JVMTI_DISABLE);
 
+    // FAIL to get the JVM to maybe unload this lib (untested)
     return 1;
 }
 
