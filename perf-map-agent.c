@@ -32,11 +32,11 @@
 FILE *method_file = NULL;
 int unfold_inlined_methods = 0;
 
-void ensure_open() {
+void open_map_file() {
     if (!method_file)
         method_file = perf_map_open(getpid());
 }
-void ensure_closed() {
+void close_map_file() {
     perf_map_close(method_file);
     method_file = NULL;
 }
@@ -131,7 +131,6 @@ cbCompiledMethodLoad(
             jint map_length,
             const jvmtiAddrLocationMap* map,
             const void* compile_info) {
-    ensure_open();
     if (unfold_inlined_methods)
         generate_unfolded_entries(jvmti, method, code_size, code_addr, map_length, map, compile_info); 
     else
@@ -143,7 +142,6 @@ cbDynamicCodeGenerated(jvmtiEnv *jvmti,
             const char* name,
             const void* address,
             jint length) {
-    ensure_open();
     perf_map_write_entry(method_file, address, length, name);
 }
 
@@ -181,8 +179,7 @@ jvmtiError set_callbacks(jvmtiEnv *jvmti) {
 
 JNIEXPORT jint JNICALL
 Agent_OnAttach(JavaVM *vm, char *options, void *reserved) {
-    ensure_open();
-    ftruncate(fileno(method_file));
+    open_map_file();
 
     unfold_inlined_methods = strstr(options, "unfold") != NULL;
 
@@ -194,7 +191,7 @@ Agent_OnAttach(JavaVM *vm, char *options, void *reserved) {
     (*jvmti)->GenerateEvents(jvmti, JVMTI_EVENT_DYNAMIC_CODE_GENERATED);
     (*jvmti)->GenerateEvents(jvmti, JVMTI_EVENT_COMPILED_METHOD_LOAD);
     set_notification_mode(jvmti, JVMTI_DISABLE);
-    ensure_closed();
+    close_map_file();
 
     // FAIL to get the JVM to maybe unload this lib (untested)
     return 1;

@@ -21,19 +21,27 @@
 #include <sys/types.h>
 #include <stdio.h>
 
+#include <error.h>
+#include <errno.h>
+
 #include "perf-map-file.h"
 
 FILE *perf_map_open(pid_t pid) {
     char filename[500];
     snprintf(filename, sizeof(filename), "/tmp/perf-%d.map", pid);
-    return fopen(filename, "w");
+    FILE * res = fopen(filename, "w");
+    if (!res) error(0, errno, "Couldn't open %s.", filename);
+    return res;
 }
 
 int perf_map_close(FILE *fp) {
-	return fclose(fp);
+    if (fp)
+        return fclose(fp);
+    else
+        return 0;
 }
 
 void perf_map_write_entry(FILE *method_file, const void* code_addr, unsigned int code_size, const char* entry) {
-    fprintf(method_file, "%lx %x %s\n", (unsigned long) code_addr, code_size, entry);
-    fflush(method_file);
+    if (method_file)
+        fprintf(method_file, "%lx %x %s\n", (unsigned long) code_addr, code_size, entry);
 }
