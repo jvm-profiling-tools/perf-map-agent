@@ -31,6 +31,7 @@
 
 FILE *method_file = NULL;
 int unfold_inlined_methods = 0;
+int print_method_signatures = 0;
 
 void open_map_file() {
     if (!method_file)
@@ -59,7 +60,10 @@ static void sig_string(jvmtiEnv *jvmti, jmethodID method, char *output, size_t n
     (*jvmti)->GetMethodDeclaringClass(jvmti, method, &class);
     (*jvmti)->GetClassSignature(jvmti, class, &csig, NULL);
 
-    snprintf(output, noutput, "%s.%s%s", csig, name, msig);
+    if (print_method_signatures)
+        snprintf(output, noutput, "%s.%s%s", csig, name, msig);
+    else
+        snprintf(output, noutput, "%s.%s", csig, name);
 
     (*jvmti)->Deallocate(jvmti, name);
     (*jvmti)->Deallocate(jvmti, msig);
@@ -182,6 +186,7 @@ Agent_OnAttach(JavaVM *vm, char *options, void *reserved) {
     open_map_file();
 
     unfold_inlined_methods = strstr(options, "unfold") != NULL;
+    print_method_signatures = strstr(options, "msig") != NULL;
 
     jvmtiEnv *jvmti;
     (*vm)->GetEnv(vm, (void **)&jvmti, JVMTI_VERSION_1);

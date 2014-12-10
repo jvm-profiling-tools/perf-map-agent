@@ -22,6 +22,7 @@ the file accessible for the root user. Then run `perf top` as root. The `perf-ja
 You can add a comma separated list of options to `perf-java` (or the `AttachOnce` runner). These options are currently supported:
 
  - `unfold`: create extra entries for every codeblock inside a method that was inlined from elsewhere (named &lt;inlined_method&gt; in &lt;root_method&gt;)
+ - `msig`: include full method signature in the name string
 
 ## Disclaimer
 
