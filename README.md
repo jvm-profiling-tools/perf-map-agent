@@ -23,6 +23,7 @@ You can add a comma separated list of options to `perf-java` (or the `AttachOnce
 
  - `unfold`: create extra entries for every codeblock inside a method that was inlined from elsewhere (named &lt;inlined_method&gt; in &lt;root_method&gt;)
  - `msig`: include full method signature in the name string
+ - `dottedclass`: convert class signature (`Ljava/lang/Class;`) to the usual class names with segments separated by dots (`java.lang.Class`). NOTE: this currently breaks coloring when used in combination with [flamegraphs](https://github.com/brendangregg/FlameGraph).
 
 ## Disclaimer
 

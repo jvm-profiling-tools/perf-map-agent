@@ -32,6 +32,7 @@
 FILE *method_file = NULL;
 int unfold_inlined_methods = 0;
 int print_method_signatures = 0;
+int clean_class_names = 0;
 
 void open_map_file() {
     if (!method_file)
@@ -51,7 +52,7 @@ static int get_line_number(jvmtiLineNumberEntry *table, jint entry_count, jlocat
 }
 
 void class_name_from_sig(char *dest, size_t dest_size, const char *sig) {
-    if (sig[0] == 'L') {
+    if (clean_class_names && sig[0] == 'L') {
         char *src = sig + 1;
         int i;
         for(i = 0; i < (dest_size - 1) && src[i]; i++) {
@@ -205,6 +206,7 @@ Agent_OnAttach(JavaVM *vm, char *options, void *reserved) {
 
     unfold_inlined_methods = strstr(options, "unfold") != NULL;
     print_method_signatures = strstr(options, "msig") != NULL;
+    clean_class_names = strstr(options, "dottedclass") != NULL;
 
     jvmtiEnv *jvmti;
     (*vm)->GetEnv(vm, (void **)&jvmti, JVMTI_VERSION_1);
