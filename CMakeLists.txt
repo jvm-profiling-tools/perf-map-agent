@@ -11,7 +11,7 @@ endif()
 INCLUDE_DIRECTORIES(${JAVA_INCLUDE_PATH})
 INCLUDE_DIRECTORIES(${JAVA_INCLUDE_PATH2})
 
-add_library(perfmap SHARED perf-map-agent.c perf-map-file.c)
+add_library(perfmap SHARED perf-map-agent.c perf-map-file.c disassembling.c symtab.c salibelf.c libproc_impl.c)
 
 find_package(Java REQUIRED)
 include(UseJava)
@@ -20,5 +20,5 @@ set(CMAKE_JAVA_INCLUDE_PATH ${JAVA_INCLUDE_PATH}/../lib/tools.jar)
 
 message(STATUS "LIBS: ${Java_JAR_EXECUTABLE} ${Java_INCLUDE_DIRS} incl: ${CMAKE_JAVA_INCLUDE_PATH}")
 
-add_jar(attach-main AttachOnce.java ENTRY_POINT net/virtualvoid/perf/AttachOnce)
+add_jar(attach-main AttachOnce.java Sleep.java ENTRY_POINT net/virtualvoid/perf/AttachOnce)
 

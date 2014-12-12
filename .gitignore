@@ -5,3 +5,6 @@ cmake_install.cmake
 Makefile
 *~
 attach-main.jar
+*.stacks
+*.collapsed
+*.svg

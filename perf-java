@@ -8,5 +8,5 @@ fi
 
 java -cp attach-main.jar:$JAVA_HOME/lib/tools.jar net.virtualvoid.perf.AttachOnce $PID $OPTIONS
 sudo chown root:root $PERF_MAP_FILE
-sudo perf top -p $PID
+sudo perf top -p $PID --objdump ./java-dump.sh -e cycles -g
 sudo rm $PERF_MAP_FILE

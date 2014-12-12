@@ -28,6 +28,7 @@
 #include <jvmticmlr.h>
 
 #include "perf-map-file.h"
+#include "disassembling.h"
 
 FILE *method_file = NULL;
 int unfold_inlined_methods = 0;
@@ -177,8 +178,31 @@ jvmtiError set_callbacks(jvmtiEnv *jvmti) {
     return (*jvmti)->SetEventCallbacks(jvmti, &callbacks, (jint)sizeof(callbacks));
 }
 
+void decode_now(void *blob) {
+    FILE *out = fopen("/tmp/test.output", "w");
+    char *stream = malloc(0x100);
+    newFdStream(fileno(out), stream);
+    decode_codeblob(blob, stream);
+    free(stream);
+    fclose(out);
+}
+
 JNIEXPORT jint JNICALL
 Agent_OnAttach(JavaVM *vm, char *options, void *reserved) {
+    printf("Options: %s\n", options);
+    char *disasmOption = strstr(options, "disasm=");
+    if (disasmOption != NULL) {
+        accessDisassembler();
+        void *code_addr;
+        sscanf(disasmOption + strlen("disasm="), "0x%lx", &code_addr);
+        void *blob = find_blob(code_addr);
+        printf("disasm: %lx, blob: %lx\n", code_addr, blob);
+
+        if (blob) decode_now(blob);
+
+        return 1;
+    }
+
     open_map_file();
 
     unfold_inlined_methods = strstr(options, "unfold") != NULL;
