@@ -2,6 +2,9 @@ A java agent to generate `/tmp/perf-<pid>.map` files for JITted methods for use 
 
 ## Build
 
+Make sure `JAVA_HOME` is configured properly.
+Then run the following on the command line:
+
     cmake .
     make
 
