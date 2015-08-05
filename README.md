@@ -34,13 +34,18 @@ The `bin` directory contains a set of shell scripts to combine common `perf` ope
 use `sudo` to call `perf` scripts.
 
  - `create-java-perf-map.sh <pid> <options*>` takes a PID and options. It knows where to find libraries relative to the `bin` directory.
- - `perf-java-top <pid> <perf-top-options>` takes a PID and additional options to pass to `perf top`. Uses the agent to create a new `/tmp/perf-<pid>.map` and then
-    calls `perf top` with the given options
- - `perf-java-record-stack <pid> <perf-record-options>` takes a PID and additional options to pass to `perf record`. Runs `perf record -g -p <pid> <perf-record-options>`
-    to collect performance data including stack traces. Afterwards it uses the agent to create a new `/tmp/perf-<pid>.map` file.
- - `perf-java-report-stack <pid> <perf-record-options>` calls first `perf-java-record-stack <pid> <perf-record-options>` and then runs `perf report` to directly analyze the
-   captured data. You can call `perf report -i /tmp/perf-<pid>.data` again with any options after the script has exited to further analyze the data from the previous run.
- - `perf-java-flames <pid> <perf-record-options>` collects data with `perf-java-record-stack` and then creates a visualization using [@brendangregg's FlameGraph](https://github.com/brendangregg/FlameGraph) tools
+ - `perf-java-top <pid> <perf-top-options>` takes a PID and additional options to pass to `perf top`. Uses the agent to create a new
+    `/tmp/perf-<pid>.map` and then calls `perf top` with the given options
+ - `perf-java-record-stack <pid> <perf-record-options>` takes a PID and additional options to pass to `perf record`. Runs
+   `perf record -g -p <pid> <perf-record-options>` to collect performance data including stack traces. Afterwards it uses the agent to create a
+   new `/tmp/perf-<pid>.map` file.
+ - `perf-java-report-stack <pid> <perf-record-options>` calls first `perf-java-record-stack <pid> <perf-record-options>` and then runs
+   `perf report` to directly analyze the captured data. You can call `perf report -i /tmp/perf-<pid>.data` again with any options after the
+   script has exited to further analyze the data from the previous run.
+ - `perf-java-flames <pid> <perf-record-options>` collects data with `perf-java-record-stack` and then creates a visualization
+   using [@brendangregg's FlameGraph](https://github.com/brendangregg/FlameGraph) tools. To get meaningful stacktraces spanning several JIT-compiled methods,
+   you need to run your JVM with `-XX:+PreserveFramePointer` (which is available starting from JDK8 update 60 build 19) as detailed
+   in [this netflix blog entry](http://techblog.netflix.com/2015/07/java-in-flames.html).
  - `create-links-in <targetdir>` will install symbolic links to the above scripts into `<targetdir>`
 
 Environment variables:
