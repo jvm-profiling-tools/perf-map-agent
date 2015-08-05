@@ -35,7 +35,7 @@ use `sudo` to call `perf` scripts.
 
  - `create-java-perf-map.sh <pid> <options*>` takes a PID and options. It knows where to find libraries relative to the `bin` directory.
  - `perf-java-top <pid> <perf-top-options>` takes a PID and additional options to pass to `perf top`. Uses the agent to create a new
-    `/tmp/perf-<pid>.map` and then calls `perf top` with the given options
+    `/tmp/perf-<pid>.map` and then calls `perf top` with the given options.
  - `perf-java-record-stack <pid> <perf-record-options>` takes a PID and additional options to pass to `perf record`. Runs
    `perf record -g -p <pid> <perf-record-options>` to collect performance data including stack traces. Afterwards it uses the agent to create a
    new `/tmp/perf-<pid>.map` file.
@@ -45,14 +45,14 @@ use `sudo` to call `perf` scripts.
  - `perf-java-flames <pid> <perf-record-options>` collects data with `perf-java-record-stack` and then creates a visualization
    using [@brendangregg's FlameGraph](https://github.com/brendangregg/FlameGraph) tools. To get meaningful stacktraces spanning several JIT-compiled methods,
    you need to run your JVM with `-XX:+PreserveFramePointer` (which is available starting from JDK8 update 60 build 19) as detailed
-   in [this netflix blog entry](http://techblog.netflix.com/2015/07/java-in-flames.html).
- - `create-links-in <targetdir>` will install symbolic links to the above scripts into `<targetdir>`
+   in [ag netflix blog entry](http://techblog.netflix.com/2015/07/java-in-flames.html).
+ - `create-links-in <targetdir>` will install symbolic links to the above scripts into `<targetdir>`.
 
 Environment variables:
 
  - `PERF_MAP_OPTIONS`: a string of additional options to pass to the agent as described below.
  - `PERF_RECORD_SECONDS`: the number of seconds, `perf-java-report-stack` and similar tools will record performance data
- - `PERF_RECORD_FREQ': the sampling frequence as passed to `perf record -F`
+ - `PERF_RECORD_FREQ`: the sampling frequence as passed to `perf record -F`
  - `FLAMEGRAPH_DIR`: the directory into which [@brendangregg's FlameGraph](https://github.com/brendangregg/FlameGraph) has been checked out
  - `PERF_JAVA_TMP`: the directory to put temporary files in, the default is `/tmp`
  - `PERF_DATA_FILE`: the file name where `perf-java-record-stack` will output performance data into, the default is `$PERF_JAVA_TMP/perf-<pid>.data`
