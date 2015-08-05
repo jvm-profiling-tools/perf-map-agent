@@ -97,7 +97,7 @@ void generate_single_entry(jvmtiEnv *jvmti, jmethodID method, const void *code_a
     perf_map_write_entry(method_file, code_addr, code_size, entry);
 }
 
-void generate_unfolded_entry(jvmtiEnv *jvmti, jmethodID method, const char *buffer, size_t buffer_size, const char *root_name) {
+void generate_unfolded_entry(jvmtiEnv *jvmti, jmethodID method, char *buffer, size_t buffer_size, const char *root_name) {
     if (unfold_simple)
         sig_string(jvmti, method, buffer, buffer_size);
     else {
