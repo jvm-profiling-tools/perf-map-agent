@@ -51,6 +51,7 @@ Environment variables:
  - `FLAMEGRAPH_DIR`: the directory into which [@brendangregg's FlameGraph](https://github.com/brendangregg/FlameGraph) has been checked out
  - `PERF_JAVA_TMP`: the directory to put temporary files in, the default is `/tmp`
  - `PERF_DATA_FILE`: the file name where `perf-java-record-stack` will output performance data into, the default is `$PERF_JAVA_TMP/perf-<pid>.data`
+ - `PERF_FLAME_OUTPUT`: the file name to which the flamegraph SVG will be written, the default is `flamegraph-<pid>.svg`
 
 ## Options
 
