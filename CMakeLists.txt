@@ -1,6 +1,10 @@
 cmake_minimum_required (VERSION 2.6)
 project (perf-map-agent)
 
+# Binaries (agent libperfmap.so and attach-main.jar) will end up in ./out
+set(OUTDIR ${PROJECT_BINARY_DIR}/out)
+set(LIBRARY_OUTPUT_PATH ${OUTDIR})
+
 find_package(JNI)
 if (JNI_FOUND)
     message (STATUS "JNI_INCLUDE_DIRS=${JNI_INCLUDE_DIRS}")
@@ -11,7 +15,7 @@ endif()
 INCLUDE_DIRECTORIES(${JAVA_INCLUDE_PATH})
 INCLUDE_DIRECTORIES(${JAVA_INCLUDE_PATH2})
 
-add_library(perfmap SHARED perf-map-agent.c perf-map-file.c)
+add_library(perfmap SHARED src/c/perf-map-agent.c src/c/perf-map-file.c)
 
 find_package(Java REQUIRED)
 include(UseJava)
@@ -20,5 +24,5 @@ set(CMAKE_JAVA_INCLUDE_PATH ${JAVA_INCLUDE_PATH}/../lib/tools.jar)
 
 message(STATUS "LIBS: ${Java_JAR_EXECUTABLE} ${Java_INCLUDE_DIRS} incl: ${CMAKE_JAVA_INCLUDE_PATH}")
 
-add_jar(attach-main AttachOnce.java ENTRY_POINT net/virtualvoid/perf/AttachOnce)
+add_jar(attach-main src/java/AttachOnce.java ENTRY_POINT net/virtualvoid/perf/AttachOnce OUTPUT_DIR ${OUTDIR})
 
