@@ -20,6 +20,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <sys/types.h>
 
@@ -54,7 +55,7 @@ static int get_line_number(jvmtiLineNumberEntry *table, jint entry_count, jlocat
 
 void class_name_from_sig(char *dest, size_t dest_size, const char *sig) {
     if (clean_class_names && sig[0] == 'L') {
-        char *src = sig + 1;
+        const char *src = sig + 1;
         int i;
         for(i = 0; i < (dest_size - 1) && src[i]; i++) {
             char c = src[i];

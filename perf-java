@@ -1,9 +1,11 @@
+#!/bin/sh
 PID=$1
 OPTIONS=$2
 PERF_MAP_FILE=/tmp/perf-$PID.map
 
 if [ -p $JAVA_HOME ]; then
   JAVA_HOME=/usr/lib/jvm/default-java
+  [ -d $JAVA_HOME ] || JAVA_HOME=/etc/alternatives/java_sdk
 fi
 
 java -cp attach-main.jar:$JAVA_HOME/lib/tools.jar net.virtualvoid.perf.AttachOnce $PID $OPTIONS
