@@ -31,6 +31,7 @@
 
 FILE *method_file = NULL;
 int unfold_inlined_methods = 0;
+int unfold_simple = 0;
 int print_method_signatures = 0;
 int clean_class_names = 0;
 
@@ -95,6 +96,16 @@ void generate_single_entry(jvmtiEnv *jvmti, jmethodID method, const void *code_a
     perf_map_write_entry(method_file, code_addr, code_size, entry);
 }
 
+void generate_unfolded_entry(jvmtiEnv *jvmti, jmethodID method, const char *buffer, size_t buffer_size, const char *root_name) {
+    if (unfold_simple)
+        sig_string(jvmti, method, buffer, buffer_size);
+    else {
+        char entry_name[1000];
+        sig_string(jvmti, method, entry_name, sizeof(entry_name));
+        snprintf(buffer, buffer_size, "%s in %s", entry_name, root_name);
+    }
+}
+
 void generate_unfolded_entries(
         jvmtiEnv *jvmti,
         jmethodID method,
@@ -122,8 +133,7 @@ void generate_unfolded_entries(
                 void *end_addr = info->pc;
 
                 if (top_method != method) {
-                    sig_string(jvmti, top_method, entry_name, sizeof(entry_name));
-                    snprintf(entry, sizeof(entry), "%s in %s", entry_name, root_name);
+                    generate_unfolded_entry(jvmti, top_method, entry, sizeof(entry), root_name);
                     entry_p = entry;
                 } else
                     entry_p = root_name;
@@ -136,8 +146,8 @@ void generate_unfolded_entries(
         }
         if (start_addr != code_addr + code_size) {
             const void *end_addr = code_addr + code_size;
-            sig_string(jvmti, cur_method, entry_name, sizeof(entry_name));
-            snprintf(entry, sizeof(entry), "%s in %s", entry_name, root_name);
+
+            generate_unfolded_entry(jvmti, cur_method, entry, sizeof(entry), root_name);
 
             perf_map_write_entry(method_file, start_addr, end_addr - start_addr, entry_p);
         }
@@ -204,7 +214,8 @@ JNIEXPORT jint JNICALL
 Agent_OnAttach(JavaVM *vm, char *options, void *reserved) {
     open_map_file();
 
-    unfold_inlined_methods = strstr(options, "unfold") != NULL;
+    unfold_simple = strstr(options, "unfoldsimple") != NULL;
+    unfold_inlined_methods = strstr(options, "unfold") != NULL || unfold_simple;
     print_method_signatures = strstr(options, "msig") != NULL;
     clean_class_names = strstr(options, "dottedclass") != NULL;
 
