@@ -36,7 +36,7 @@ public class AttachOnce {
     static void loadAgent(String pid, String options) throws Exception {
         VirtualMachine vm = VirtualMachine.attach(pid);
         try {
-            File lib = new File("out/libperfmap.so");
+            File lib = new File("libperfmap.so");
             String fullPath = lib.getAbsolutePath();
             if (!lib.exists()) {
                 System.out.printf("Expected libperfmap.so at '%s' but it didn't exist.\n", fullPath);

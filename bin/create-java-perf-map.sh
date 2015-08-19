@@ -18,5 +18,5 @@ fi
 [ -d $JAVA_HOME ] || (echo "JAVA_HOME directory at '$JAVA_HOME' does not exist." && false)
 
 sudo rm $PERF_MAP_FILE -f
-(cd $PERF_MAP_DIR && java -cp $ATTACH_JAR_PATH:$JAVA_HOME/lib/tools.jar net.virtualvoid.perf.AttachOnce $PID $OPTIONS)
+(cd $PERF_MAP_DIR/out && java -cp $ATTACH_JAR_PATH:$JAVA_HOME/lib/tools.jar net.virtualvoid.perf.AttachOnce $PID $OPTIONS)
 sudo chown root:root $PERF_MAP_FILE
