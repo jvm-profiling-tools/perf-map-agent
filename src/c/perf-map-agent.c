@@ -78,7 +78,7 @@ static void sig_string(jvmtiEnv *jvmti, jmethodID method, char *output, size_t n
     (*jvmti)->GetMethodDeclaringClass(jvmti, method, &class);
     (*jvmti)->GetClassSignature(jvmti, class, &csig, NULL);
 
-    char class_name[1000];
+    char class_name[2000];
     class_name_from_sig(class_name, sizeof(class_name), csig);
 
     if (print_method_signatures)
@@ -92,7 +92,7 @@ static void sig_string(jvmtiEnv *jvmti, jmethodID method, char *output, size_t n
 }
 
 void generate_single_entry(jvmtiEnv *jvmti, jmethodID method, const void *code_addr, jint code_size) {
-    char entry[100];
+    char entry[2000];
     sig_string(jvmti, method, entry, sizeof(entry));
     perf_map_write_entry(method_file, code_addr, code_size, entry);
 }
@@ -101,7 +101,7 @@ void generate_unfolded_entry(jvmtiEnv *jvmti, jmethodID method, char *buffer, si
     if (unfold_simple)
         sig_string(jvmti, method, buffer, buffer_size);
     else {
-        char entry_name[1000];
+        char entry_name[2000];
         sig_string(jvmti, method, entry_name, sizeof(entry_name));
         snprintf(buffer, buffer_size, "%s in %s", entry_name, root_name);
     }
@@ -117,9 +117,9 @@ void generate_unfolded_entries(
         const void* compile_info) {
     int i;
     const jvmtiCompiledMethodLoadRecordHeader *header = compile_info;
-    char root_name[1000];
-    char entry_name[1000];
-    char entry[1000];
+    char root_name[2000];
+    char entry_name[2000];
+    char entry[5000];
     sig_string(jvmti, method, root_name, sizeof(root_name));
     if (header->kind == JVMTI_CMLR_INLINE_INFO) {
         const char *entry_p;
