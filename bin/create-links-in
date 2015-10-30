@@ -5,7 +5,7 @@ set -e
 TARGET_DIR=$1
 BIN_DIR=`dirname $0`
 
-if [ -z $TARGET_DIR ]; then
+if [ -z "$TARGET_DIR" ]; then
   echo "Please specify a target directory."
   exit
 fi
