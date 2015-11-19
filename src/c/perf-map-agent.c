@@ -88,7 +88,7 @@ static void sig_string(jvmtiEnv *jvmti, jmethodID method, char *output, size_t n
             !(*jvmti)->GetClassSignature(jvmti, class, &csig, NULL)) {
 
             char source_info[1000] = "";
-            char method_signature[1000] = "";
+            char *method_signature = "";
 
             if (print_source_loc) {
                 if (!(*jvmti)->GetSourceFileName(jvmti, class, &sourcefile)) {
@@ -104,7 +104,7 @@ static void sig_string(jvmtiEnv *jvmti, jmethodID method, char *output, size_t n
             }
 
             if (print_method_signatures && msig)
-                strncpy(method_signature, msig, sizeof(method_signature));
+                method_signature = msig;
 
             char class_name[2000];
             class_name_from_sig(class_name, sizeof(class_name), csig);
