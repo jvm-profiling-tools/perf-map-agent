@@ -1,6 +1,9 @@
 cmake_minimum_required (VERSION 2.6)
 project (perf-map-agent)
 
+# uncomment to make a debug build (including source positions and symbols)
+# set(CMAKE_BUILD_TYPE DEBUG)
+
 # Binaries (agent libperfmap.so and attach-main.jar) will end up in ./out
 set(OUTDIR ${PROJECT_BINARY_DIR}/out)
 set(LIBRARY_OUTPUT_PATH ${OUTDIR})
