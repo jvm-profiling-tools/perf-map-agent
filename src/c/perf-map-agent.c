@@ -74,58 +74,47 @@ static void sig_string(jvmtiEnv *jvmti, jmethodID method, char *output, size_t n
     char *name = NULL;
     char *msig = NULL;
     char *csig = NULL;
+    char *empty = "";
     jvmtiLineNumberEntry *lines = NULL;
 
     jclass class;
     jvmtiError error = 0;
     jint entrycount = 0;
-    int lineno = -1;
 
-    if((*jvmti)->GetMethodName(jvmti, method, &name, &msig, NULL)) {
-      msig = NULL;
-      name = NULL;
+    strncpy(output, "<error writing signature>", noutput);
+
+    if (!(*jvmti)->GetMethodName(jvmti, method, &name, &msig, NULL)) {
+        if (!(*jvmti)->GetMethodDeclaringClass(jvmti, method, &class) &&
+            !(*jvmti)->GetClassSignature(jvmti, class, &csig, NULL)) {
+
+            char source_info[1000] = "";
+            char method_signature[1000] = "";
+
+            if (print_source_loc) {
+                if (!(*jvmti)->GetSourceFileName(jvmti, class, &sourcefile)) {
+                    if (!(*jvmti)->GetLineNumberTable(jvmti, method, &entrycount, &lines)) {
+                        int lineno = -1;
+                        if(entrycount > 0) lineno = lines[0].line_number;
+                        snprintf(source_info, sizeof(source_info), "(%s:%d)", sourcefile, lineno);
+
+                        if (lines != NULL) (*jvmti)->Deallocate(jvmti, (unsigned char *) lines);
+                    }
+                    if (sourcefile != NULL) (*jvmti)->Deallocate(jvmti, sourcefile);
+                }
+            }
+
+            if (print_method_signatures && msig)
+                strncpy(method_signature, msig, sizeof(method_signature));
+
+            char class_name[2000];
+            class_name_from_sig(class_name, sizeof(class_name), csig);
+            snprintf(output, noutput, "%s.%s%s%s", class_name, name, method_signature, source_info);
+
+            if (csig != NULL) (*jvmti)->Deallocate(jvmti, csig);
+        }
+        if (name != NULL) (*jvmti)->Deallocate(jvmti, name);
+        if (msig != NULL) (*jvmti)->Deallocate(jvmti, msig);
     }
-
-    // need to set csig to NULL if GetClassSignature fails, but we can't even call
-    // GetClassSignature unless GetMethodDeclaringClass succeeds.
-    if(! (*jvmti)->GetMethodDeclaringClass(jvmti, method, &class) && (*jvmti)->GetClassSignature(jvmti, class, &csig, NULL)) {
-      csig = NULL;
-    }
-
-    if(print_source_loc) {
-      if((*jvmti)->GetSourceFileName(jvmti, class, &sourcefile)) {
-        sourcefile = NULL;
-      }
-
-      if((*jvmti)->GetLineNumberTable(jvmti, method, &entrycount, &lines)) {
-        lines = NULL;
-      }
-      else if(entrycount > 0) {
-        lineno = lines[0].line_number;
-      }
-    }
-
-    if(csig != NULL) {
-      char class_name[2000];
-      class_name_from_sig(class_name, sizeof(class_name), csig);
-
-      if(print_method_signatures && sourcefile != NULL) {
-        snprintf(output, noutput, "%s.%s%s(%s:%d)", class_name, name, msig, sourcefile, lineno);
-      }
-      else if(print_method_signatures)
-        snprintf(output, noutput, "%s.%s%s", class_name, name, msig);
-      else if(sourcefile != NULL) {
-        snprintf(output, noutput, "%s.%s(%s:%d)", class_name, name, sourcefile, lineno);
-      }
-      else
-        snprintf(output, noutput, "%s.%s", class_name, name);
-    }
-
-    if(sourcefile != NULL) (*jvmti)->Deallocate(jvmti, sourcefile);
-    if(lines != NULL) (*jvmti)->Deallocate(jvmti, (unsigned char*) lines);
-    if(name != NULL) (*jvmti)->Deallocate(jvmti, name);
-    if(msig != NULL) (*jvmti)->Deallocate(jvmti, msig);
-    if(csig != NULL) (*jvmti)->Deallocate(jvmti, csig);
 }
 
 void generate_single_entry(jvmtiEnv *jvmti, jmethodID method, const void *code_addr, jint code_size) {
@@ -255,7 +244,7 @@ Agent_OnAttach(JavaVM *vm, char *options, void *reserved) {
     unfold_simple = strstr(options, "unfoldsimple") != NULL;
     unfold_inlined_methods = strstr(options, "unfold") != NULL || unfold_simple;
     print_method_signatures = strstr(options, "msig") != NULL;
-    print_source_loc = strstr(options, "showsource") != NULL;
+    print_source_loc = strstr(options, "sourcepos") != NULL;
     clean_class_names = strstr(options, "dottedclass") != NULL;
 
     jvmtiEnv *jvmti;

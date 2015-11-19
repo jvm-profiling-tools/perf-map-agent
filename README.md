@@ -63,12 +63,15 @@ Environment variables:
 
 You can add a comma separated list of options to `perf-java` (or the `AttachOnce` runner). These options are currently supported:
 
- - `unfold`: Create extra entries for every codeblock inside a method that was inlined from elsewhere (named &lt;inlined_method&gt; in &lt;root_method&gt;).
-    Be aware of the effects of 'skid' in relation with unfolding. See the section below.
+ - `unfold`: Create extra entries for every codeblock inside a method that was inlined from elsewhere
+    (named &lt;inlined_method&gt; in &lt;root_method&gt;). Be aware of the effects of 'skid' in relation with unfolding.
+    See the section below.
  - `unfoldsimple`: similar to `unfold`, however, the extra entries do not include the " in &lt;root_method&gt;" part
  - `msig`: include full method signature in the name string
- - `dottedclass`: convert class signature (`Ljava/lang/Class;`) to the usual class names with segments separated by dots (`java.lang.Class`). NOTE: this currently breaks coloring when used in combination with [flamegraphs](https://github.com/brendangregg/FlameGraph).
- - `showsource`: Adds the name of the source file and the line number on which it is declared for each method. Useful when profiling Scala applications that crate a lot of synthetic classes and methods. Does not work with native methods.
+ - `dottedclass`: convert class signature (`Ljava/lang/Class;`) to the usual class names with segments separated by dots
+   (`java.lang.Class`). NOTE: this currently breaks coloring when used in combination with [flamegraphs](https://github.com/brendangregg/FlameGraph).
+ - `sourcepos`: Adds the name of the source file and the line number on which it is declared for each method. Useful
+   when profiling Scala applications that crate a lot of synthetic classes and methods. Does not work with native methods.
 
 ## Known Issues
 
