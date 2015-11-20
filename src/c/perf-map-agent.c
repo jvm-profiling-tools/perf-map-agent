@@ -18,6 +18,7 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -30,13 +31,13 @@
 
 #include "perf-map-file.h"
 
-FILE *method_file = NULL;
-int unfold_inlined_methods = 0;
-int unfold_simple = 0;
-int print_method_signatures = 0;
-int print_source_loc = 0;
-int clean_class_names = 0;
+bool unfold_inlined_methods = false;
+bool unfold_simple = false;
+bool print_method_signatures = false;
+bool print_source_loc = false;
+bool clean_class_names = false;
 
+FILE *method_file = NULL;
 void open_map_file() {
     if (!method_file)
         method_file = perf_map_open(getpid());
