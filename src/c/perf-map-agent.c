@@ -143,7 +143,7 @@ void write_unfolded_entry(
         const void *start_addr,
         const void *end_addr) {
     // needs to accommodate: entry_name + " in " + root_name
-    char inlined_name[sizeof(root_name) * 2 + 4];
+    char inlined_name[2000 * 2 + 4];
     const char *entry_p;
 
     if (cur_method != root_method) {
