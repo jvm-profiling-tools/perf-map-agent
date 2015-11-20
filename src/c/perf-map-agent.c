@@ -168,8 +168,8 @@ void generate_unfolded_entries(
                 // top method has changed, record the range for current method
                 void *end_addr = info->pc;
 
-                if (top_method != root_method) {
-                    generate_unfolded_entry(jvmti, top_method, inlined_name, sizeof(inlined_name), root_name);
+                if (cur_method != root_method) {
+                    generate_unfolded_entry(jvmti, cur_method, inlined_name, sizeof(inlined_name), root_name);
                     entry_p = inlined_name;
                 } else
                     entry_p = root_name;
