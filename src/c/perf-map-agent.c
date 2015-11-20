@@ -31,6 +31,8 @@
 
 #include "perf-map-file.h"
 
+#define STRING_BUFFER_SIZE 2000
+
 bool unfold_inlined_methods = false;
 bool unfold_simple = false;
 bool print_method_signatures = false;
@@ -107,7 +109,7 @@ static void sig_string(jvmtiEnv *jvmti, jmethodID method, char *output, size_t n
             if (print_method_signatures && msig)
                 method_signature = msig;
 
-            char class_name[2000];
+            char class_name[STRING_BUFFER_SIZE];
             class_name_from_sig(class_name, sizeof(class_name), csig);
             snprintf(output, noutput, "%s.%s%s%s", class_name, name, method_signature, source_info);
 
@@ -119,7 +121,7 @@ static void sig_string(jvmtiEnv *jvmti, jmethodID method, char *output, size_t n
 }
 
 void generate_single_entry(jvmtiEnv *jvmti, jmethodID method, const void *code_addr, jint code_size) {
-    char entry[2000];
+    char entry[STRING_BUFFER_SIZE];
     sig_string(jvmti, method, entry, sizeof(entry));
     perf_map_write_entry(method_file, code_addr, code_size, entry);
 }
@@ -129,7 +131,7 @@ void generate_unfolded_entry(jvmtiEnv *jvmti, jmethodID method, char *buffer, si
     if (unfold_simple)
         sig_string(jvmti, method, buffer, buffer_size);
     else {
-        char entry_name[2000];
+        char entry_name[STRING_BUFFER_SIZE];
         sig_string(jvmti, method, entry_name, sizeof(entry_name));
         snprintf(buffer, buffer_size, "%s in %s", entry_name, root_name);
     }
@@ -144,7 +146,7 @@ void write_unfolded_entry(
         const void *start_addr,
         const void *end_addr) {
     // needs to accommodate: entry_name + " in " + root_name
-    char inlined_name[2000 * 2 + 4];
+    char inlined_name[STRING_BUFFER_SIZE * 2 + 4];
     const char *entry_p;
 
     if (cur_method != root_method) {
@@ -165,7 +167,7 @@ void generate_unfolded_entries(
         const jvmtiAddrLocationMap* map,
         const void* compile_info) {
     const jvmtiCompiledMethodLoadRecordHeader *header = compile_info;
-    char root_name[2000];
+    char root_name[STRING_BUFFER_SIZE];
 
     sig_string(jvmti, root_method, root_name, sizeof(root_name));
     if (header->kind == JVMTI_CMLR_INLINE_INFO) {
