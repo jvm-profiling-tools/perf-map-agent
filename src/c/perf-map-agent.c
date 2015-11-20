@@ -74,7 +74,7 @@ void class_name_from_sig(char *dest, size_t dest_size, const char *sig) {
 
 static void sig_string(jvmtiEnv *jvmti, jmethodID method, char *output, size_t noutput) {
     char *sourcefile = NULL;
-    char *name = NULL;
+    char *method_name = NULL;
     char *msig = NULL;
     char *csig = NULL;
     char *empty = "";
@@ -86,7 +86,7 @@ static void sig_string(jvmtiEnv *jvmti, jmethodID method, char *output, size_t n
 
     strncpy(output, "<error writing signature>", noutput);
 
-    if (!(*jvmti)->GetMethodName(jvmti, method, &name, &msig, NULL)) {
+    if (!(*jvmti)->GetMethodName(jvmti, method, &method_name, &msig, NULL)) {
         if (!(*jvmti)->GetMethodDeclaringClass(jvmti, method, &class) &&
             !(*jvmti)->GetClassSignature(jvmti, class, &csig, NULL)) {
 
@@ -111,11 +111,11 @@ static void sig_string(jvmtiEnv *jvmti, jmethodID method, char *output, size_t n
 
             char class_name[STRING_BUFFER_SIZE];
             class_name_from_sig(class_name, sizeof(class_name), csig);
-            snprintf(output, noutput, "%s.%s%s%s", class_name, name, method_signature, source_info);
+            snprintf(output, noutput, "%s::%s%s%s", class_name, method_name, method_signature, source_info);
 
             if (csig != NULL) (*jvmti)->Deallocate(jvmti, csig);
         }
-        if (name != NULL) (*jvmti)->Deallocate(jvmti, name);
+        if (method_name != NULL) (*jvmti)->Deallocate(jvmti, method_name);
         if (msig != NULL) (*jvmti)->Deallocate(jvmti, msig);
     }
 }
