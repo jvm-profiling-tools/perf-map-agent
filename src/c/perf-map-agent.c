@@ -123,6 +123,7 @@ void generate_single_entry(jvmtiEnv *jvmti, jmethodID method, const void *code_a
     perf_map_write_entry(method_file, code_addr, code_size, entry);
 }
 
+/* Generates either a simple or a complex unfolded entry. */
 void generate_unfolded_entry(jvmtiEnv *jvmti, jmethodID method, char *buffer, size_t buffer_size, const char *root_name) {
     if (unfold_simple)
         sig_string(jvmti, method, buffer, buffer_size);
@@ -131,6 +132,27 @@ void generate_unfolded_entry(jvmtiEnv *jvmti, jmethodID method, char *buffer, si
         sig_string(jvmti, method, entry_name, sizeof(entry_name));
         snprintf(buffer, buffer_size, "%s in %s", entry_name, root_name);
     }
+}
+
+/* Generates and writes a single entry for a given inlined method. */
+void write_unfolded_entry(
+        jvmtiEnv *jvmti,
+        jmethodID cur_method,
+        jmethodID root_method,
+        const char *root_name,
+        const void *start_addr,
+        const void *end_addr) {
+    // needs to accommodate: entry_name + " in " + root_name
+    char inlined_name[sizeof(root_name) * 2 + 4];
+    const char *entry_p;
+
+    if (cur_method != root_method) {
+        generate_unfolded_entry(jvmti, cur_method, inlined_name, sizeof(inlined_name), root_name);
+        entry_p = inlined_name;
+    } else
+        entry_p = root_name;
+
+    perf_map_write_entry(method_file, start_addr, end_addr - start_addr, entry_p);
 }
 
 void generate_unfolded_entries(
@@ -144,12 +166,8 @@ void generate_unfolded_entries(
     const jvmtiCompiledMethodLoadRecordHeader *header = compile_info;
     char root_name[2000];
 
-    // needs to accommodate: entry_name + " in " + root_name
-    char inlined_name[sizeof(root_name) * 2 + 4];
-
     sig_string(jvmti, root_method, root_name, sizeof(root_name));
     if (header->kind == JVMTI_CMLR_INLINE_INFO) {
-        const char *entry_p;
         const jvmtiCompiledMethodLoadInlineRecord *record = (jvmtiCompiledMethodLoadInlineRecord *) header;
 
         const void *start_addr = code_addr;
@@ -167,14 +185,7 @@ void generate_unfolded_entries(
 
                 // top method has changed, record the range for current method
                 void *end_addr = info->pc;
-
-                if (cur_method != root_method) {
-                    generate_unfolded_entry(jvmti, cur_method, inlined_name, sizeof(inlined_name), root_name);
-                    entry_p = inlined_name;
-                } else
-                    entry_p = root_name;
-
-                perf_map_write_entry(method_file, start_addr, end_addr - start_addr, entry_p);
+                write_unfolded_entry(jvmti, cur_method, root_method, root_name, start_addr, end_addr);
 
                 start_addr = info->pc;
                 cur_method = top_method;
@@ -183,10 +194,9 @@ void generate_unfolded_entries(
 
         // record the last range if there's a gap
         if (start_addr != code_addr + code_size) {
+            // end_addr is end of this complete code blob
             const void *end_addr = code_addr + code_size;
-
-            generate_unfolded_entry(jvmti, cur_method, inlined_name, sizeof(inlined_name), root_name);
-            perf_map_write_entry(method_file, start_addr, end_addr - start_addr, entry_p);
+            write_unfolded_entry(jvmti, cur_method, root_method, root_name, start_addr, end_addr);
         }
     } else
         generate_single_entry(jvmti, root_method, code_addr, code_size);
