@@ -32,9 +32,11 @@
 #include "perf-map-file.h"
 
 #define STRING_BUFFER_SIZE 2000
+#define BIG_STRING_BUFFER_SIZE 20000
 
 bool unfold_inlined_methods = false;
 bool unfold_simple = false;
+bool unfold_all = false;
 bool print_method_signatures = false;
 bool print_source_loc = false;
 bool clean_class_names = false;
@@ -140,7 +142,7 @@ void generate_unfolded_entry(jvmtiEnv *jvmti, jmethodID method, char *buffer, si
 /* Generates and writes a single entry for a given inlined method. */
 void write_unfolded_entry(
         jvmtiEnv *jvmti,
-        jmethodID cur_method,
+        PCStackInfo *info,
         jmethodID root_method,
         const char *root_name,
         const void *start_addr,
@@ -149,11 +151,25 @@ void write_unfolded_entry(
     char inlined_name[STRING_BUFFER_SIZE * 2 + 4];
     const char *entry_p;
 
-    if (cur_method != root_method) {
-        generate_unfolded_entry(jvmti, cur_method, inlined_name, sizeof(inlined_name), root_name);
-        entry_p = inlined_name;
-    } else
-        entry_p = root_name;
+    if (unfold_all) {
+        char full_name[BIG_STRING_BUFFER_SIZE];
+        full_name[0] = '\0';
+        int i;
+        for (i = info->numstackframes - 1; i >= 0; i--) {
+            //printf("At %d method is %d len %d remaining %d\n", i, info->methods[i], strlen(full_name), sizeof(full_name) - 1 - strlen(full_name));
+            sig_string(jvmti, info->methods[i], inlined_name, sizeof(inlined_name));
+            strncat(full_name, inlined_name, sizeof(full_name) - 1 - strlen(full_name)); // TODO optimize
+            if (i != 0) strncat(full_name, "->", sizeof(full_name));
+        }
+        entry_p = full_name;
+    } else {
+        jmethodID cur_method = info->methods[0]; // top of stack
+        if (cur_method != root_method) {
+            generate_unfolded_entry(jvmti, cur_method, inlined_name, sizeof(inlined_name), root_name);
+            entry_p = inlined_name;
+        } else
+            entry_p = root_name;
+    }
 
     perf_map_write_entry(method_file, start_addr, end_addr - start_addr, entry_p);
 }
@@ -184,11 +200,11 @@ void generate_unfolded_entries(
             jmethodID top_method = info->methods[0];
 
             // as long as the top method remains the same we delay recording
-            if (cur_method != top_method) {
+            if (cur_method != top_method && i > 0) {
 
                 // top method has changed, record the range for current method
                 void *end_addr = info->pc;
-                write_unfolded_entry(jvmti, cur_method, root_method, root_name, start_addr, end_addr);
+                write_unfolded_entry(jvmti, &record->pcinfo[i - 1], root_method, root_name, start_addr, end_addr);
 
                 start_addr = info->pc;
                 cur_method = top_method;
@@ -199,7 +215,7 @@ void generate_unfolded_entries(
         if (start_addr != code_addr + code_size) {
             // end_addr is end of this complete code blob
             const void *end_addr = code_addr + code_size;
-            write_unfolded_entry(jvmti, cur_method, root_method, root_name, start_addr, end_addr);
+            write_unfolded_entry(jvmti, &record->pcinfo[i - 1], root_method, root_name, start_addr, end_addr);
         }
     } else
         generate_single_entry(jvmti, root_method, code_addr, code_size);
@@ -265,7 +281,8 @@ Agent_OnAttach(JavaVM *vm, char *options, void *reserved) {
     open_map_file();
 
     unfold_simple = strstr(options, "unfoldsimple") != NULL;
-    unfold_inlined_methods = strstr(options, "unfold") != NULL || unfold_simple;
+    unfold_all = strstr(options, "unfoldall") != NULL;
+    unfold_inlined_methods = strstr(options, "unfold") != NULL || unfold_simple || unfold_all;
     print_method_signatures = strstr(options, "msig") != NULL;
     print_source_loc = strstr(options, "sourcepos") != NULL;
     clean_class_names = strstr(options, "dottedclass") != NULL;
