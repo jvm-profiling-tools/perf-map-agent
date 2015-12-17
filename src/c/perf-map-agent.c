@@ -174,6 +174,37 @@ void write_unfolded_entry(
     perf_map_write_entry(method_file, start_addr, end_addr - start_addr, entry_p);
 }
 
+void dump_entries(
+        jvmtiEnv *jvmti,
+        jmethodID root_method,
+        jint code_size,
+        const void* code_addr,
+        jint map_length,
+        const jvmtiAddrLocationMap* map,
+        const void* compile_info) {
+    const jvmtiCompiledMethodLoadRecordHeader *header = compile_info;
+    char root_name[STRING_BUFFER_SIZE];
+    sig_string(jvmti, root_method, root_name, sizeof(root_name));
+    printf("At %s size %lx from %lx to %lx", root_name, code_size, code_addr, code_addr + code_size);
+    if (header->kind == JVMTI_CMLR_INLINE_INFO) {
+        const jvmtiCompiledMethodLoadInlineRecord *record = (jvmtiCompiledMethodLoadInlineRecord *) header;
+        printf(" with %d entries\n", record->numpcs);
+
+        int i;
+        for (i = 0; i < record->numpcs; i++) {
+            PCStackInfo *info = &record->pcinfo[i];
+            printf("  %lx has %d stack entries\n", info->pc, info->numstackframes);
+
+            int j;
+            for (j = 0; j < info->numstackframes; j++) {
+                char buf[2000];
+                sig_string(jvmti, info->methods[j], buf, sizeof(buf));
+                printf("    %s\n", buf);
+            }
+        }
+    } else printf(" with no inline info\n");
+}
+
 void generate_unfolded_entries(
         jvmtiEnv *jvmti,
         jmethodID root_method,
@@ -186,6 +217,8 @@ void generate_unfolded_entries(
     char root_name[STRING_BUFFER_SIZE];
 
     sig_string(jvmti, root_method, root_name, sizeof(root_name));
+    //dump_entries(jvmti, root_method, code_size, code_addr, map_length, map, compile_info);
+    //printf("At %s size %lx from %lx to %lx\n", root_name, code_size, code_addr, code_addr + code_size);
     if (header->kind == JVMTI_CMLR_INLINE_INFO) {
         const jvmtiCompiledMethodLoadInlineRecord *record = (jvmtiCompiledMethodLoadInlineRecord *) header;
 
@@ -200,11 +233,14 @@ void generate_unfolded_entries(
             jmethodID top_method = info->methods[0];
 
             // as long as the top method remains the same we delay recording
-            if (cur_method != top_method && i > 0) {
-
+            if (cur_method != top_method) {
                 // top method has changed, record the range for current method
                 void *end_addr = info->pc;
-                write_unfolded_entry(jvmti, &record->pcinfo[i - 1], root_method, root_name, start_addr, end_addr);
+
+                if (i > 0)
+                    write_unfolded_entry(jvmti, &record->pcinfo[i - 1], root_method, root_name, start_addr, end_addr);
+                else
+                    generate_single_entry(jvmti, root_method, start_addr, end_addr - start_addr);
 
                 start_addr = info->pc;
                 cur_method = top_method;
@@ -215,7 +251,11 @@ void generate_unfolded_entries(
         if (start_addr != code_addr + code_size) {
             // end_addr is end of this complete code blob
             const void *end_addr = code_addr + code_size;
-            write_unfolded_entry(jvmti, &record->pcinfo[i - 1], root_method, root_name, start_addr, end_addr);
+
+            if (i > 0)
+                write_unfolded_entry(jvmti, &record->pcinfo[i - 1], root_method, root_name, start_addr, end_addr);
+            else
+                generate_single_entry(jvmti, root_method, start_addr, end_addr - start_addr);
         }
     } else
         generate_single_entry(jvmti, root_method, code_addr, code_size);
