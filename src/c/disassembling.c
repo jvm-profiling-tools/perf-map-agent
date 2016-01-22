@@ -46,10 +46,10 @@ long code_offset;
 
 void findCode(void *libjvm_handle) {
     VMStructEntry *entry = *((VMStructEntry **)dlsym(libjvm_handle, "gHotSpotVMStructs"));
-    
+
     while (entry->fieldName) {
         printf("%s.%s\n", entry->typeName, entry->fieldName);
-        if (strcmp(entry->typeName, "methodOopDesc") == 0 && 
+        if (strcmp(entry->typeName, "methodOopDesc") == 0 &&
             strcmp(entry->fieldName, "_code") == 0) {
             code_entry = entry;
             code_offset = entry -> offset;

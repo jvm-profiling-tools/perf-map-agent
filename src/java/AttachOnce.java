@@ -1,7 +1,7 @@
 /*
  *   libperfmap: a JVM agent to create perf-<pid>.map files for consumption
  *               with linux perf-tools
- *   Copyright (C) 2013 Johannes Rudolph<johannes.rudolph@gmail.com>
+ *   Copyright (C) 2013-2015 Johannes Rudolph<johannes.rudolph@gmail.com>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -32,14 +32,14 @@ public class AttachOnce {
     public static void main(String[] args) throws Exception {
         String pid = args[0];
         String options = "";
-        if (args.length == 7) { // objdump
+        if (args.length == 8) { // objdump
             assert(args[0].startsWith("--start-address="));
             String addr = args[0].substring("--start-address=".length());
             //long addrl = Long.parseLong(addr, 16); // sanity check
             options = "disasm="+addr;
 
             MessageFormat format = new MessageFormat("/tmp/perf-{0}.map");
-            pid = (String) format.parse(args[6])[0];
+            pid = (String) format.parse(args[7])[0];
             System.err.println("Got address "+addr+" and pid "+pid);
             loadAgent(pid, options);
 
@@ -61,7 +61,13 @@ public class AttachOnce {
     static void loadAgent(String pid, String options) throws Exception {
         VirtualMachine vm = VirtualMachine.attach(pid);
         try {
-            vm.loadAgentPath(new File("./libperfmap.so").getAbsolutePath(), options);
+            File lib = new File("libperfmap.so");
+            String fullPath = lib.getAbsolutePath();
+            if (!lib.exists()) {
+                System.out.printf("Expected libperfmap.so at '%s' but it didn't exist.\n", fullPath);
+                System.exit(1);
+            }
+            else vm.loadAgentPath(fullPath, options);
         } catch(com.sun.tools.attach.AgentInitializationException e) {
             // rethrow all but the expected exception
             if (!e.getMessage().equals("Agent_OnAttach failed")) throw e;

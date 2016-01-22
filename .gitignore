@@ -1,10 +1,7 @@
 CMakeFiles
 CMakeCache.txt
 cmake_install.cmake
-*.so
 Makefile
 *~
-attach-main.jar
-*.stacks
-*.collapsed
 *.svg
+out

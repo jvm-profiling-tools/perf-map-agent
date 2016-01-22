@@ -1,7 +1,7 @@
 /*
  *   libperfmap: a JVM agent to create perf-<pid>.map files for consumption
  *               with linux perf-tools
- *   Copyright (C) 2013 Johannes Rudolph<johannes.rudolph@gmail.com>
+ *   Copyright (C) 2013-2015 Johannes Rudolph<johannes.rudolph@gmail.com>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
  */
 
 FILE *perf_map_open(pid_t pid);
+int perf_map_close(FILE *fp);
 void perf_map_write_entry(FILE *method_file, const void* code_addr, unsigned int code_size, const char* entry);
 
 

@@ -1,7 +1,7 @@
 /*
  *   libperfmap: a JVM agent to create perf-<pid>.map files for consumption
  *               with linux perf-tools
- *   Copyright (C) 2013 Johannes Rudolph<johannes.rudolph@gmail.com>
+ *   Copyright (C) 2013-2015 Johannes Rudolph<johannes.rudolph@gmail.com>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -18,8 +18,10 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <sys/types.h>
 
@@ -30,9 +32,15 @@
 #include "perf-map-file.h"
 #include "disassembling.h"
 
-FILE *method_file = NULL;
-int unfold_inlined_methods = 0;
+#define STRING_BUFFER_SIZE 2000
 
+bool unfold_inlined_methods = false;
+bool unfold_simple = false;
+bool print_method_signatures = false;
+bool print_source_loc = false;
+bool clean_class_names = false;
+
+FILE *method_file = NULL;
 void open_map_file() {
     if (!method_file)
         method_file = perf_map_open(getpid());
@@ -50,77 +58,152 @@ static int get_line_number(jvmtiLineNumberEntry *table, jint entry_count, jlocat
   return -1;
 }
 
+void class_name_from_sig(char *dest, size_t dest_size, const char *sig) {
+    if (clean_class_names && sig[0] == 'L') {
+        const char *src = sig + 1;
+        int i;
+        for(i = 0; i < (dest_size - 1) && src[i]; i++) {
+            char c = src[i];
+            if (c == '/') c = '.';
+            if (c == ';') c = 0;
+            dest[i] = c;
+        }
+        dest[i] = 0;
+    } else
+        strncpy(dest, sig, dest_size);
+}
+
 static void sig_string(jvmtiEnv *jvmti, jmethodID method, char *output, size_t noutput) {
-    char *name;
-    char *msig;
+    char *sourcefile = NULL;
+    char *method_name = NULL;
+    char *msig = NULL;
+    char *csig = NULL;
+    char *empty = "";
+    jvmtiLineNumberEntry *lines = NULL;
+
     jclass class;
-    char *csig;
+    jvmtiError error = 0;
+    jint entrycount = 0;
 
-    (*jvmti)->GetMethodName(jvmti, method, &name, &msig, NULL);
-    (*jvmti)->GetMethodDeclaringClass(jvmti, method, &class);
-    (*jvmti)->GetClassSignature(jvmti, class, &csig, NULL);
+    strncpy(output, "<error writing signature>", noutput);
 
-    snprintf(output, noutput, "%s.%s%s", csig, name, msig);
+    if (!(*jvmti)->GetMethodName(jvmti, method, &method_name, &msig, NULL)) {
+        if (!(*jvmti)->GetMethodDeclaringClass(jvmti, method, &class) &&
+            !(*jvmti)->GetClassSignature(jvmti, class, &csig, NULL)) {
 
-    (*jvmti)->Deallocate(jvmti, name);
-    (*jvmti)->Deallocate(jvmti, msig);
-    (*jvmti)->Deallocate(jvmti, csig);
+            char source_info[1000] = "";
+            char *method_signature = "";
+
+            if (print_source_loc) {
+                if (!(*jvmti)->GetSourceFileName(jvmti, class, &sourcefile)) {
+                    if (!(*jvmti)->GetLineNumberTable(jvmti, method, &entrycount, &lines)) {
+                        int lineno = -1;
+                        if(entrycount > 0) lineno = lines[0].line_number;
+                        snprintf(source_info, sizeof(source_info), "(%s:%d)", sourcefile, lineno);
+
+                        if (lines != NULL) (*jvmti)->Deallocate(jvmti, (unsigned char *) lines);
+                    }
+                    if (sourcefile != NULL) (*jvmti)->Deallocate(jvmti, sourcefile);
+                }
+            }
+
+            if (print_method_signatures && msig)
+                method_signature = msig;
+
+            char class_name[STRING_BUFFER_SIZE];
+            class_name_from_sig(class_name, sizeof(class_name), csig);
+            snprintf(output, noutput, "%s::%s%s%s", class_name, method_name, method_signature, source_info);
+
+            if (csig != NULL) (*jvmti)->Deallocate(jvmti, csig);
+        }
+        if (method_name != NULL) (*jvmti)->Deallocate(jvmti, method_name);
+        if (msig != NULL) (*jvmti)->Deallocate(jvmti, msig);
+    }
 }
 
 void generate_single_entry(jvmtiEnv *jvmti, jmethodID method, const void *code_addr, jint code_size) {
-    char entry[100];
+    char entry[STRING_BUFFER_SIZE];
     sig_string(jvmti, method, entry, sizeof(entry));
     perf_map_write_entry(method_file, code_addr, code_size, entry);
 }
 
+/* Generates either a simple or a complex unfolded entry. */
+void generate_unfolded_entry(jvmtiEnv *jvmti, jmethodID method, char *buffer, size_t buffer_size, const char *root_name) {
+    if (unfold_simple)
+        sig_string(jvmti, method, buffer, buffer_size);
+    else {
+        char entry_name[STRING_BUFFER_SIZE];
+        sig_string(jvmti, method, entry_name, sizeof(entry_name));
+        snprintf(buffer, buffer_size, "%s in %s", entry_name, root_name);
+    }
+}
+
+/* Generates and writes a single entry for a given inlined method. */
+void write_unfolded_entry(
+        jvmtiEnv *jvmti,
+        jmethodID cur_method,
+        jmethodID root_method,
+        const char *root_name,
+        const void *start_addr,
+        const void *end_addr) {
+    // needs to accommodate: entry_name + " in " + root_name
+    char inlined_name[STRING_BUFFER_SIZE * 2 + 4];
+    const char *entry_p;
+
+    if (cur_method != root_method) {
+        generate_unfolded_entry(jvmti, cur_method, inlined_name, sizeof(inlined_name), root_name);
+        entry_p = inlined_name;
+    } else
+        entry_p = root_name;
+
+    perf_map_write_entry(method_file, start_addr, end_addr - start_addr, entry_p);
+}
+
 void generate_unfolded_entries(
         jvmtiEnv *jvmti,
-        jmethodID method,
+        jmethodID root_method,
         jint code_size,
         const void* code_addr,
         jint map_length,
         const jvmtiAddrLocationMap* map,
         const void* compile_info) {
-    int i;
     const jvmtiCompiledMethodLoadRecordHeader *header = compile_info;
-    char root_name[1000];
-    char entry_name[1000];
-    char entry[1000];
-    sig_string(jvmti, method, root_name, sizeof(root_name));
+    char root_name[STRING_BUFFER_SIZE];
+
+    sig_string(jvmti, root_method, root_name, sizeof(root_name));
     if (header->kind == JVMTI_CMLR_INLINE_INFO) {
-        const char *entry_p;
         const jvmtiCompiledMethodLoadInlineRecord *record = (jvmtiCompiledMethodLoadInlineRecord *) header;
 
         const void *start_addr = code_addr;
-        jmethodID cur_method = method;
+        jmethodID cur_method = root_method;
+
+        // walk through the method meta data per PC to extract address range
+        // per inlined method.
+        int i;
         for (i = 0; i < record->numpcs; i++) {
             PCStackInfo *info = &record->pcinfo[i];
             jmethodID top_method = info->methods[0];
+
+            // as long as the top method remains the same we delay recording
             if (cur_method != top_method) {
+
+                // top method has changed, record the range for current method
                 void *end_addr = info->pc;
-
-                if (top_method != method) {
-                    sig_string(jvmti, top_method, entry_name, sizeof(entry_name));
-                    snprintf(entry, sizeof(entry), "%s in %s", entry_name, root_name);
-                    entry_p = entry;
-                } else
-                    entry_p = root_name;
-
-                perf_map_write_entry(method_file, start_addr, end_addr - start_addr, entry_p);
+                write_unfolded_entry(jvmti, cur_method, root_method, root_name, start_addr, end_addr);
 
                 start_addr = info->pc;
                 cur_method = top_method;
             }
         }
-        if (start_addr != code_addr + code_size) {
-            const void *end_addr = code_addr + code_size;
-            sig_string(jvmti, cur_method, entry_name, sizeof(entry_name));
-            snprintf(entry, sizeof(entry), "%s in %s", entry_name, root_name);
 
-            perf_map_write_entry(method_file, start_addr, end_addr - start_addr, entry_p);
+        // record the last range if there's a gap
+        if (start_addr != code_addr + code_size) {
+            // end_addr is end of this complete code blob
+            const void *end_addr = code_addr + code_size;
+            write_unfolded_entry(jvmti, cur_method, root_method, root_name, start_addr, end_addr);
         }
     } else
-        generate_single_entry(jvmti, method, code_addr, code_size);
+        generate_single_entry(jvmti, root_method, code_addr, code_size);
 }
 
 static void JNICALL
@@ -189,7 +272,6 @@ void decode_now(void *blob) {
 
 JNIEXPORT jint JNICALL
 Agent_OnAttach(JavaVM *vm, char *options, void *reserved) {
-    printf("Options: %s\n", options);
     char *disasmOption = strstr(options, "disasm=");
     if (disasmOption != NULL) {
         accessDisassembler();
@@ -205,7 +287,11 @@ Agent_OnAttach(JavaVM *vm, char *options, void *reserved) {
 
     open_map_file();
 
-    unfold_inlined_methods = strstr(options, "unfold") != NULL;
+    unfold_simple = strstr(options, "unfoldsimple") != NULL;
+    unfold_inlined_methods = strstr(options, "unfold") != NULL || unfold_simple;
+    print_method_signatures = strstr(options, "msig") != NULL;
+    print_source_loc = strstr(options, "sourcepos") != NULL;
+    clean_class_names = strstr(options, "dottedclass") != NULL;
 
     jvmtiEnv *jvmti;
     (*vm)->GetEnv(vm, (void **)&jvmti, JVMTI_VERSION_1);
@@ -217,7 +303,6 @@ Agent_OnAttach(JavaVM *vm, char *options, void *reserved) {
     set_notification_mode(jvmti, JVMTI_DISABLE);
     close_map_file();
 
-    // FAIL to get the JVM to maybe unload this lib (untested)
-    return 1;
+    return 0;
 }
 
