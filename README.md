@@ -80,7 +80,7 @@ You can add a comma separated list of options to `perf-java` (or the `AttachOnce
 You should be aware that instruction level profiling is not absolutely accurate but suffers from
 '[skid](http://www.spinics.net/lists/linux-perf-users/msg02157.html)'. 'skid' means that the actual instruction
 pointer may already have moved a bit further when a sample is recorded. In that case, (possibly hot) code is reported at
-an address shortly after the actual hot instruction.
+an address shortly after the actual hot instruction. See this [sample from one of Brendan's presentations](http://www.slideshare.net/brendangregg/scale2015-linux-perfprofiling/65) demonstrating this issue.
 
 If using `unfold`, perf-map-agent will report sections that contain code inlined from other methods as separate entries.
 Unfolded entries can be quite short, e.g. an inlined getter may only consist of a few instructions that now lives inside of another
