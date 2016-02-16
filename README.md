@@ -4,7 +4,7 @@ A java agent to generate `/tmp/perf-<pid>.map` files for just-in-time(JIT)-compi
 
 ## Build
 
-Make sure `JAVA_HOME` is configured to point to a JDK. Then run the following on the command line:
+Make sure `JAVA_HOME` is configured to point to a JDK. You need cmake >= 2.8.6 (see [#30](https://github.com/jrudolph/perf-map-agent/issues/30)). Then run the following on the command line:
 
     cmake .
     make
