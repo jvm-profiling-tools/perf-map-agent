@@ -214,7 +214,7 @@ cbCompiledMethodLoad(
             jint map_length,
             const jvmtiAddrLocationMap* map,
             const void* compile_info) {
-    if (unfold_inlined_methods)
+    if (unfold_inlined_methods && compile_info != NULL)
         generate_unfolded_entries(jvmti, method, code_size, code_addr, map_length, map, compile_info); 
     else
         generate_single_entry(jvmti, method, code_addr, code_size);
