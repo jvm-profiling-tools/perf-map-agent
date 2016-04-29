@@ -40,6 +40,7 @@ bool unfold_all = false;
 bool print_method_signatures = false;
 bool print_source_loc = false;
 bool clean_class_names = false;
+bool debug_dump_unfold_entries = false;
 
 FILE *method_file = NULL;
 void open_map_file() {
@@ -185,7 +186,7 @@ void dump_entries(
     const jvmtiCompiledMethodLoadRecordHeader *header = compile_info;
     char root_name[STRING_BUFFER_SIZE];
     sig_string(jvmti, root_method, root_name, sizeof(root_name));
-    printf("At %s size %lx from %lx to %lx", root_name, code_size, code_addr, code_addr + code_size);
+    printf("At %s size %x from %p to %p", root_name, code_size, code_addr, code_addr + code_size);
     if (header->kind == JVMTI_CMLR_INLINE_INFO) {
         const jvmtiCompiledMethodLoadInlineRecord *record = (jvmtiCompiledMethodLoadInlineRecord *) header;
         printf(" with %d entries\n", record->numpcs);
@@ -193,7 +194,7 @@ void dump_entries(
         int i;
         for (i = 0; i < record->numpcs; i++) {
             PCStackInfo *info = &record->pcinfo[i];
-            printf("  %lx has %d stack entries\n", info->pc, info->numstackframes);
+            printf("  %p has %d stack entries\n", info->pc, info->numstackframes);
 
             int j;
             for (j = 0; j < info->numstackframes; j++) {
@@ -217,8 +218,10 @@ void generate_unfolded_entries(
     char root_name[STRING_BUFFER_SIZE];
 
     sig_string(jvmti, root_method, root_name, sizeof(root_name));
-    //dump_entries(jvmti, root_method, code_size, code_addr, map_length, map, compile_info);
-    //printf("At %s size %lx from %lx to %lx\n", root_name, code_size, code_addr, code_addr + code_size);
+
+    if (debug_dump_unfold_entries)
+        dump_entries(jvmti, root_method, code_size, code_addr, map_length, map, compile_info);
+
     if (header->kind == JVMTI_CMLR_INLINE_INFO) {
         const jvmtiCompiledMethodLoadInlineRecord *record = (jvmtiCompiledMethodLoadInlineRecord *) header;
 
@@ -326,6 +329,7 @@ Agent_OnAttach(JavaVM *vm, char *options, void *reserved) {
     print_method_signatures = strstr(options, "msig") != NULL;
     print_source_loc = strstr(options, "sourcepos") != NULL;
     clean_class_names = strstr(options, "dottedclass") != NULL;
+    debug_dump_unfold_entries = strstr(options, "debug_dump_unfold_entries") != NULL;
 
     jvmtiEnv *jvmti;
     (*vm)->GetEnv(vm, (void **)&jvmti, JVMTI_VERSION_1);
