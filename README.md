@@ -65,7 +65,9 @@ You can add a comma separated list of options to `perf-java` (or the `AttachOnce
 
  - `unfold`: Create extra entries for every codeblock inside a method that was inlined from elsewhere
     (named &lt;inlined_method&gt; in &lt;root_method&gt;). Be aware of the effects of 'skid' in relation with unfolding.
-    See the section below.
+    See the section below. Also, see the below section about inaccurate inlining information.
+ - `unfoldall`: Similar to `unfold` but will include the complete inlined stack at a code location in the form
+    `root_method->inlined method 1->inlined method 2->...->inlined method on top`.
  - `unfoldsimple`: similar to `unfold`, however, the extra entries do not include the " in &lt;root_method&gt;" part
  - `msig`: include full method signature in the name string
  - `dottedclass`: convert class signature (`Ljava/lang/Class;`) to the usual class names with segments separated by dots
@@ -93,6 +95,17 @@ tools that operate on the symbol level like the standard views of `perf report`,
 
 So, while it is tempting to enable unfolded entries for the perceived extra resolution, this extra information is sometimes just noise
 which will not only clutter the overall view but may also be misleading or wrong.
+
+### Inaccurate mappings using the `unfold*` options
+
+Hotspot does not retain line number and other debug information for inlined code at other places than safepoints. This
+makes sense because you don't usually observe code running between safepoints from the JVM's perspective. This is different
+when observing a process from the outside like with `perf`. For observed code locations outside of safepoints, the JVM will
+not report any inlining information and perf-map-agent will assign those areas to the host method of the inlining.
+
+For more fidelity, Hotspot can be instructed to include debug information for non-safepoints as well. Use
+`-XX:+UnlockDiagnosticVMOptions -XX:+DebugNonSafepoints` when running the target process. Note, however, that this will
+produce a lot more information with the generated `perf-<pid>.map` file potentially growing to MBs of size.
 
 ### Agent Library Unloading
 
