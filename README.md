@@ -115,6 +115,13 @@ produce a lot more information with the generated `perf-<pid>.map` file potentia
 Unloading or reloading of a changed agent library is not supported by the JVM (but re-attaching is). Therefore, if you make changes to the
 agent and recompile it you need to restart a target process that has an older version loaded to use the newer version.
 
+### Missing symbols for libjvm.so
+
+libjvm.so is the runtime component of the JVM. It is not covered by perf-map-agent but perf will use debug symbols as
+provided by the distribution. If symbols for libjvm.so are missing see instructions for your Linux distribution to
+install debug symbols for the JVM. See also [issue #39](https://github.com/jrudolph/perf-map-agent/issues/39) which
+contains a few pointers about how to install these.
+
 ## Disclaimer
 
 I'm not a professional C code writer. The code is very "experimental", and it is e.g. missing checks for error conditions etc.. Use it at your own risk. You have been warned!
