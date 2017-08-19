@@ -32,8 +32,7 @@ It then attaches to the target process and instructs it to load the agent librar
 
 ## Command line scripts
 
-The `bin` directory contains a set of shell scripts to combine common `perf` operations with creating the map file. The scripts will
-use `sudo` to call `perf` scripts.
+The `bin` directory contains a set of shell scripts to combine common `perf` / `dtrace` perations with creating the map file.
 
  - `create-java-perf-map.sh <pid> <options*>` takes a PID and options. It knows where to find libraries relative to the `bin` directory.
  - `perf-java-top <pid> <perf-top-options>` takes a PID and additional options to pass to `perf top`. Uses the agent to create a new
@@ -49,6 +48,12 @@ use `sudo` to call `perf` scripts.
    you need to run your JVM with `-XX:+PreserveFramePointer` (which is available starting from JDK8 update 60 build 19) as detailed
    in [ag netflix blog entry](http://techblog.netflix.com/2015/07/java-in-flames.html).
  - `create-links-in <targetdir>` will install symbolic links to the above scripts into `<targetdir>`.
+ - `dtrace-java-record-stack <pid>` takes a PID. Runs`dtrace` to collect performance data including stack traces. Afterwards it uses the agent to create a
+   new `/tmp/perf-<pid>.map` file.
+ - `dtrace-java-flames <pid>` collects data with `dtrace-java-record-stack` and then creates a visualization
+   using [@brendangregg's FlameGraph](https://github.com/brendangregg/FlameGraph) tools. To get meaningful stacktraces spanning several JIT-compiled methods,
+   you need to run your JVM with `-XX:+PreserveFramePointer` (which is available starting from JDK8 update 60 build 19) as detailed
+   in [ag netflix blog entry](http://techblog.netflix.com/2015/07/java-in-flames.html).
 
 Environment variables:
 
@@ -61,6 +66,10 @@ Environment variables:
  - `PERF_COLLAPSE_OPTS`: a string of additional flags to pass to stackcollapse-perf.pl (found in FLAMEGRAPH_DIR), (add --inline with unfoldall perfmap) 
  - `PERF_FLAME_OUTPUT`: the file name to which the flamegraph SVG will be written, the default is `flamegraph-<pid>.svg`
  - `PERF_FLAME_OPTS`: options to pass to flamegraph.pl (found in FLAMEGRAPH_DIR), the default is  `--color java`
+ - `DTRACE_SECONDS`: the number of seconds, `dtrace` and similar tools will record performance data
+ - `DTRACE_FREQ`: the sampling frequence as passed to `dtrace`
+ - `DTRACE_JAVA_TMP`: the directory to put temporary files in, the default is `/tmp`
+ - `DTRACE_DATA_FILE`: the file name where `dtrace-java-record-stack` will output performance data into, the default is `$DTRACE_JAVA_TMP/dtrace-<pid>.data`
 
 ## Options
 

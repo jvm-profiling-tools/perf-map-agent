@@ -24,6 +24,7 @@ import java.io.File;
 
 import com.sun.tools.attach.VirtualMachine;
 import java.lang.management.ManagementFactory;
+import java.util.Locale;
 
 public class AttachOnce {
     public static void main(String[] args) throws Exception {
@@ -36,7 +37,12 @@ public class AttachOnce {
     static void loadAgent(String pid, String options) throws Exception {
         VirtualMachine vm = VirtualMachine.attach(pid);
         try {
-            File lib = new File("libperfmap.so");
+            final File lib;
+            if (System.getProperty("os.name", "").toLowerCase(Locale.US).contains("os x")) {
+                lib = new File("libperfmap.dylib");
+            } else {
+                lib = new File("libperfmap.so");
+            }
             String fullPath = lib.getAbsolutePath();
             if (!lib.exists()) {
                 System.out.printf("Expected libperfmap.so at '%s' but it didn't exist.\n", fullPath);

@@ -1,0 +1,30 @@
+#!/bin/bash
+
+set -e
+
+PERF_MAP_DIR="$(cd "$(dirname "$0")" && pwd -P)"/..
+
+PID=$1
+
+if [ -z "$DTRACE_JAVA_TMP" ]; then
+  DTRACE_JAVA_TMP=/tmp
+fi
+
+if [ -z "$DTRACE_SECONDS" ]; then
+  DTRACE_SECONDS=15
+fi
+
+if [ -z "$DTRACE_FREQ" ]; then
+  DTRACE_FREQ=99
+fi
+
+if [ -z "$DTRACE_FRAMES" ]; then
+  DTRACE_FRAMES=100
+fi
+
+if [ -z "$DTRACE_DATA_FILE" ]; then
+  DTRACE_DATA_FILE=$DTRACE_JAVA_TMP/dtrace-$PID.data
+fi
+
+sudo dtrace -x ustackframes=$DTRACE_FRAMES -n "profile-$DTRACE_FREQ /pid == $PID && arg1/ { @[ustack()] = count(); } tick-"$DTRACE_SECONDS"s { exit(0); }" -p $PID > $DTRACE_DATA_FILE
+$PERF_MAP_DIR/bin/create-java-perf-map.sh $PID "$PERF_MAP_OPTIONS"

@@ -1,0 +1,35 @@
+#!/bin/sh
+
+set -e
+PID=$1
+
+if [ -z "$DTRACE_JAVA_TMP" ]; then
+  DTRACE_JAVA_TMP=/tmp
+fi
+
+STACKS=$DTRACE_JAVA_TMP/out-$PID.stacks
+COLLAPSED=$DTRACE_JAVA_TMP/out-$PID.collapsed
+PERF_MAP_DIR="$(cd "$(dirname "$0")" && pwd -P)"/..
+PERF_MAP_FILE=/tmp/perf-$PID.map
+
+if [ ! -x "$FLAMEGRAPH_DIR/stackcollapse.pl" ]; then
+  echo "FlameGraph executable not found at '$FLAMEGRAPH_DIR/stackcollapse.pl'. Please set FLAMEGRAPH_DIR to the root of the clone of https://github.com/brendangregg/FlameGraph."
+  exit
+fi
+
+if [ -z "$DTRACE_DATA_FILE" ]; then
+  PERF_DATA_FILE=$DTRACE_JAVA_TMP/dtrace-$PID.data
+fi
+
+if [ -z "$DTRACE_FLAME_OUTPUT" ]; then
+  DTRACE_FLAME_OUTPUT=flamegraph-$PID.svg
+fi
+
+if [ -z "$DTRACE_FLAME_OPTS" ]; then
+    DTRACE_FLAME_OPTS="--color=java"
+fi
+
+$PERF_MAP_DIR/bin/dtrace-java-record-stack $*
+cat $PERF_DATA_FILE | $PERF_MAP_DIR/bin/dtrace-perf-map.pl $PERF_MAP_FILE > $STACKS
+$FLAMEGRAPH_DIR/stackcollapse.pl $DTRACE_COLLAPSE_OPTS $STACKS | tee $COLLAPSED | $FLAMEGRAPH_DIR/flamegraph.pl $DTRACE_FLAME_OPTS > $DTRACE_FLAME_OUTPUT
+echo "Flame graph SVG written to DTRACE_FLAME_OUTPUT='`pwd`/$DTRACE_FLAME_OUTPUT'."
