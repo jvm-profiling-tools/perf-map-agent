@@ -80,11 +80,9 @@ static void sig_string(jvmtiEnv *jvmti, jmethodID method, char *output, size_t n
     char *method_name = NULL;
     char *msig = NULL;
     char *csig = NULL;
-    char *empty = "";
     jvmtiLineNumberEntry *lines = NULL;
 
     jclass class;
-    jvmtiError error = 0;
     jint entrycount = 0;
 
     strncpy(output, "<error writing signature>", noutput);
@@ -105,7 +103,7 @@ static void sig_string(jvmtiEnv *jvmti, jmethodID method, char *output, size_t n
 
                         if (lines != NULL) (*jvmti)->Deallocate(jvmti, (unsigned char *) lines);
                     }
-                    if (sourcefile != NULL) (*jvmti)->Deallocate(jvmti, sourcefile);
+                    if (sourcefile != NULL) (*jvmti)->Deallocate(jvmti, (unsigned char *) sourcefile);
                 }
             }
 
@@ -116,17 +114,17 @@ static void sig_string(jvmtiEnv *jvmti, jmethodID method, char *output, size_t n
             class_name_from_sig(class_name, sizeof(class_name), csig);
             snprintf(output, noutput, "%s::%s%s%s", class_name, method_name, method_signature, source_info);
 
-            if (csig != NULL) (*jvmti)->Deallocate(jvmti, csig);
+            if (csig != NULL) (*jvmti)->Deallocate(jvmti, (unsigned char *) csig);
         }
-        if (method_name != NULL) (*jvmti)->Deallocate(jvmti, method_name);
-        if (msig != NULL) (*jvmti)->Deallocate(jvmti, msig);
+        if (method_name != NULL) (*jvmti)->Deallocate(jvmti, (unsigned char *) method_name);
+        if (msig != NULL) (*jvmti)->Deallocate(jvmti, (unsigned char *) msig);
     }
 }
 
 void generate_single_entry(jvmtiEnv *jvmti, jmethodID method, const void *code_addr, jint code_size) {
     char entry[STRING_BUFFER_SIZE];
     sig_string(jvmti, method, entry, sizeof(entry));
-    perf_map_write_entry(method_file, code_addr, code_size, entry);
+    perf_map_write_entry(method_file, code_addr, (unsigned int) code_size, entry);
 }
 
 /* Generates either a simple or a complex unfolded entry. */
@@ -160,7 +158,7 @@ void write_unfolded_entry(
             //printf("At %d method is %d len %d remaining %d\n", i, info->methods[i], strlen(full_name), sizeof(full_name) - 1 - strlen(full_name));
             sig_string(jvmti, info->methods[i], inlined_name, sizeof(inlined_name));
             strncat(full_name, inlined_name, sizeof(full_name) - 1 - strlen(full_name)); // TODO optimize
-            if (i != 0) strncat(full_name, "->", sizeof(full_name));
+            if (i != 0) strncat(full_name, "->", sizeof(full_name) -1 - strlen(full_name));
         }
         entry_p = full_name;
     } else {
@@ -172,7 +170,7 @@ void write_unfolded_entry(
             entry_p = root_name;
     }
 
-    perf_map_write_entry(method_file, start_addr, end_addr - start_addr, entry_p);
+    perf_map_write_entry(method_file, start_addr, (unsigned int) (end_addr - start_addr), entry_p);
 }
 
 void dump_entries(
@@ -243,7 +241,7 @@ void generate_unfolded_entries(
                 if (i > 0)
                     write_unfolded_entry(jvmti, &record->pcinfo[i - 1], root_method, root_name, start_addr, end_addr);
                 else
-                    generate_single_entry(jvmti, root_method, start_addr, end_addr - start_addr);
+                    generate_single_entry(jvmti, root_method, start_addr, (unsigned int) (end_addr - start_addr));
 
                 start_addr = info->pc;
                 cur_method = top_method;
@@ -258,7 +256,7 @@ void generate_unfolded_entries(
             if (i > 0)
                 write_unfolded_entry(jvmti, &record->pcinfo[i - 1], root_method, root_name, start_addr, end_addr);
             else
-                generate_single_entry(jvmti, root_method, start_addr, end_addr - start_addr);
+                generate_single_entry(jvmti, root_method, start_addr, (unsigned int) (end_addr - start_addr));
         }
     } else
         generate_single_entry(jvmti, root_method, code_addr, code_size);
@@ -284,7 +282,7 @@ cbDynamicCodeGenerated(jvmtiEnv *jvmti,
             const char* name,
             const void* address,
             jint length) {
-    perf_map_write_entry(method_file, address, length, name);
+    perf_map_write_entry(method_file, address, (unsigned int) length, name);
 }
 
 void set_notification_mode(jvmtiEnv *jvmti, jvmtiEventMode mode) {
