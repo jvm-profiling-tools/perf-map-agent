@@ -1,0 +1,35 @@
+language: cpp
+matrix:
+  include:
+    - os: linux
+      dist: trusty
+      sudo: required
+      compiler: gcc
+    - os: linux
+      dist: trusty
+      sudo: required
+      compiler: clang
+    - os: osx
+      osx_image: xcode7.3
+      compiler: gcc
+    - os: osx
+      osx_image: xcode7.3
+      compiler: clang
+    - os: osx
+      osx_image: xcode9
+      compiler: gcc
+    - os: osx
+      osx_image: xcode9
+      compiler: clang
+branches:
+  only:
+  - master
+before_install:
+  - if [ $TRAVIS_OS_NAME == linux ]; then sudo apt-get update && sudo apt-get install -y default-jdk && sudo apt-get install -y cmake; fi
+  - if [ $TRAVIS_OS_NAME == osx ]; then brew update && brew uninstall cmake && brew install cmake && brew tap caskroom/versions && brew cask reinstall java8; fi
+  - g++ --version
+  - clang++ --version
+  - java -version
+  - if [ $TRAVIS_OS_NAME == osx ]; then export JAVA_HOME=$(/usr/libexec/java_home); fi
+
+script: cmake . && make
