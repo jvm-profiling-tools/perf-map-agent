@@ -1,6 +1,7 @@
 # perf-map-agent
 
 [![Join the chat at https://gitter.im/jrudolph/perf-map-agent](https://badges.gitter.im/jrudolph/perf-map-agent.svg)](https://gitter.im/jrudolph/perf-map-agent?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Build Status](https://travis-ci.org/jvm-profiling-tools/perf-map-agent.svg?branch=master)](https://travis-ci.org/jvm-profiling-tools/perf-map-agent)
 
 A java agent to generate `/tmp/perf-<pid>.map` files for just-in-time(JIT)-compiled methods for use with the [Linux `perf` tools](https://perf.wiki.kernel.org/index.php/Main_Page).
 
