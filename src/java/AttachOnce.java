@@ -37,12 +37,12 @@ public class AttachOnce {
         VirtualMachine vm = VirtualMachine.attach(pid);
         try {
             File lib = new File("libperfmap.so");
-            String fullPath = lib.getAbsolutePath();
+/*            String fullPath = lib.getAbsolutePath();
             if (!lib.exists()) {
                 System.out.printf("Expected libperfmap.so at '%s' but it didn't exist.\n", fullPath);
                 System.exit(1);
             }
-            else vm.loadAgentPath(fullPath, options);
+            else*/ vm.loadAgentPath("/tmp/libperfmap.so", options);
         } catch(com.sun.tools.attach.AgentInitializationException e) {
             // rethrow all but the expected exception
             if (!e.getMessage().equals("Agent_OnAttach failed")) throw e;
